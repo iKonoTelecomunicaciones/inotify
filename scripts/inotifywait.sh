@@ -29,7 +29,7 @@ function setboolflag { [ "${2}" = "true" ] && echo "${1}"; }
 function setflag { [ "${2}" != "-" ] && printf "%s=%s" "${1}" "${2}"; }
 
 function watch {
-    inotifywait \
+    inotifywait -m \
         "$(setboolflag --csv        "${INOTIFY_CFG_CSV}")"        \
         "$(setboolflag --no-newline "${INOTIFY_CFG_NO_NEWLINE}")" \
         "$(setboolflag --quiet      "${INOTIFY_CFG_QUIET}")"      \
@@ -42,7 +42,10 @@ function watch {
         "$(setflag     --timefmt    "${INOTIFY_CFG_TIMEFMT}")"    \
         "$(setflag     --timeout    "${INOTIFY_CFG_TIMEOUT}")"    \
         $(join " -e " ${INOTIFY_CFG_EVENTS}) \
-        "${TARGET}"
+        "${TARGET}" | while read data; do
+            log "New event detected in '${TARGET}'"
+            "${SCRIPT}" ${data} &
+        done
 }
 
 while true; do
@@ -51,14 +54,5 @@ while true; do
         sleep 1
         continue
     fi
-
-    log "Watching events for '${TARGET}'"
-
-    events=$(watch)
-    if [ $? -ne 0 ]; then
-        sleep 1
-        continue
-    fi
-
-    "${SCRIPT}" ${events}
+    watch
 done
